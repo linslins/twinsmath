@@ -68,12 +68,16 @@ button:active{transform:scale(.97)}
 
 <section class="screen" id="game">
   <div class="row"><button class="back" id="quit" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="#3B3560" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-  <div class="chip" style="background:var(--butter)"><svg viewBox="0 0 24 24" fill="#F29A3C"><path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-4 3-7 1 1 2 2 2 3 1-2 1-5 1-8z"/></svg><span id="gRun">0 in a row</span></div></div>
+  <div class="row" style="gap:8px;flex:1;justify-content:flex-end">
+    <button class="back" id="lvDown" aria-label="Easier level" style="background:var(--mint)"><svg viewBox="0 0 24 24" fill="none" stroke="#2E7D50" stroke-width="3.4" stroke-linecap="round"><path d="M6 12h12"/></svg></button>
+    <div style="font-size:20px;font-weight:700;min-width:84px;text-align:center;line-height:1"><span style="font-size:14px;font-weight:500;color:var(--soft)">Level</span><br><span id="gLvl" style="font-size:30px">1</span></div>
+    <button class="back" id="lvUp" aria-label="Harder level" style="background:var(--peach)"><svg viewBox="0 0 24 24" fill="none" stroke="#B5531F" stroke-width="3.4" stroke-linecap="round"><path d="M6 12h12M12 6v12"/></svg></button>
+  </div></div>
   <div class="bar" id="bar"></div>
   <div class="q"><div id="qHint">How many?</div><b id="qText"></b></div>
   <div class="ans" id="ans"></div>
-  <div class="fb" id="fb"></div>
   <button class="cta" id="next" style="display:none"></button>
+  <div class="fb" id="fb"></div>
 </section>
 
 <section class="screen" id="end" style="align-items:center;text-align:center;justify-content:center">
@@ -206,10 +210,19 @@ function nextQ(){
   if(G.i>=ROUND)return endRound();
   G.q=makeQ(G.op);G.locked=false;
   $('qText').textContent=G.q.text;
-  $('qHint').textContent=OPS[G.op].name+' · level '+level(G.op);
+  $('qHint').textContent=OPS[G.op].name+(S.run>1?' · '+S.run+' in a row':'');
+  $('gLvl').textContent=level(G.op);
   var h='';G.q.choices.forEach(function(c,i){h+='<button data-v="'+c+'" style="background:'+COLORS[i%4]+'">'+c+'</button>'});
   $('ans').innerHTML=h;$('fb').className='fb';$('fb').innerHTML='';$('next').style.display='none';
-  $('gRun').textContent=S.run+' in a row';drawBar();
+  drawBar();
+}
+function shiftLevel(d){
+  if(!G)return;
+  var op=G.op,lv=level(op),to=Math.max(1,Math.min(10,lv+d));
+  if(to===lv)return;
+  S.score[op]=(to-1)+0.2;save();
+  $('gLvl').textContent=to;
+  if(!G.locked)nextQ(); /* re-roll this question at the new level */
 }
 function answer(v){
   if(G.locked)return;G.locked=true;
@@ -231,10 +244,9 @@ function answer(v){
   var note=ok?(after>before?'Level up! Getting a bit trickier.':''):(after<before?'Next one will be a little easier.':'Good try, keep going!');
   fb.className='fb on';fb.style.background=ok?'#E4F7EA':'#FFEFE4';
   fb.innerHTML=mascot(ok?'happy':'sad',ok?84:72)+'<h2>'+msg+'</h2>'+(ok?'':'<h2 style="font-size:40px">'+q.text+' = '+q.ans+'</h2>'+dotsFor(q))+(note?'<p>'+note+'</p>':'');
-  $('gRun').textContent=S.run+' in a row';drawBar();
+  $('gLvl').textContent=after;drawBar();
   var nx=$('next');nx.style.display='block';nx.textContent=(G.i+1>=ROUND)?'Finish':'Next';
   nx.style.background=ok?'#7FCB9C':'#F5B48F';nx.style.color=ok?'#1F3B2A':'#4A2412';
-  nx.scrollIntoView({block:'end',behavior:'smooth'});
   if(ok){SFX.right();if(after>before)setTimeout(SFX.levelup,450)}else SFX.wrong();
   newB.forEach(function(b,i){setTimeout(function(){toast(b)},900+i*2600)});
 }
@@ -291,6 +303,8 @@ document.querySelectorAll('[data-op]').forEach(function(b){b.addEventListener('c
 $('ans').addEventListener('click',function(e){var b=e.target.closest('button');if(b&&!b.disabled)answer(+b.dataset.v)});
 $('next').addEventListener('click',function(){G.i++;nextQ();$('game').scrollTop=0});
 $('quit').addEventListener('click',renderHome);
+$('lvDown').addEventListener('click',function(){shiftLevel(-1)});
+$('lvUp').addEventListener('click',function(){shiftLevel(1)});
 $('again').addEventListener('click',function(){startRound(G.op)});
 $('endHome').addEventListener('click',renderHome);
 $('toBadges').addEventListener('click',renderBadges);
